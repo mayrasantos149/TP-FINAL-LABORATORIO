@@ -44,8 +44,8 @@ Proceso TerminalAutogestion
     Definir auth Como Logico;
     
     // Inicializar
-	InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, descuentosFecha);
-
+	InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, descuentosFecha, pasajerosPago, pasajerosDestino);
+	
     
     Repetir
         Escribir "===========================================";
@@ -118,8 +118,10 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
         Leer opc;
         
         Segun opc Hacer
-            1: Escribir "Balance de transporte (próximamente)";
-            2: Escribir "Estado de los asientos (próximamente)";
+            1: 
+				BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros, pasajerosDestino);
+            2: 
+				EstadoAsientos(destinos, asientos);
             3: 
                 Escribir "Listado de pasajeros";
                 ListaPasajeros(pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, destinos, TotaldePasajeros, pasajerosFecha);
@@ -128,6 +130,240 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
         FinSegun
     Hasta Que opc = 4;
 FinSubProceso
+
+// imprime matriz de asientos
+SubProceso ImprimirMatrizAsientos(asientos, destinoElegido)
+    Definir i, j, asientoActual Como Entero;
+    
+    Escribir "MAPA DEL AVIÓN (O=libre / X=ocupado)";
+    Escribir "     A    B    C    D";
+    
+    Para i <- 0 Hasta 9 Hacer
+		si i = 9 Entonces
+			Escribir Sin Saltar "F", (i+1), "";
+		SiNo
+			Escribir Sin Saltar "F", (i+1), " ";
+		FinSi
+        Para j <- 0 Hasta 3 Hacer
+            asientoActual <- i*4 + j;
+            Si asientos[destinoElegido, asientoActual] = 0 Entonces
+                Escribir Sin Saltar " [O] ";
+            Sino
+                Escribir Sin Saltar " [X] ";
+            FinSi
+        FinPara
+        Escribir "";
+    FinPara
+FinSubProceso
+
+SubProceso EstadoAsientos(destinos, asientos)
+    Definir opc, destinoElegido, i, j, asientoActual, ocupados, vacios Como Entero;
+    Definir porcentajeOcupacion Como Real;
+    
+    Repetir
+        // Menú de selección de destino
+        Escribir "===========================================";
+        Escribir "        ESTADO DE ASIENTOS - MENÚ";
+        Escribir "===========================================";
+        Escribir "Seleccione el destino a visualizar:";
+        Para i <- 0 Hasta 5 Hacer
+            Escribir (i+1), ". ", destinos[i,1], " -> ", destinos[i,2];
+        FinPara
+        Escribir "7. Volver al menú anterior";
+        Escribir "-------------------------------------------";
+        Escribir Sin Saltar "Seleccione una opción: ";
+        Leer opc;
+        
+        Si opc >= 1 Y opc <= 6 Entonces
+            destinoElegido <- opc - 1;
+            
+            // Contar asientos ocupados y vacíos
+            ocupados <- 0;
+            vacios <- 0;
+            
+            Para i <- 0 Hasta 39 Hacer
+                Si asientos[destinoElegido, i] = 1 Entonces
+                    ocupados <- ocupados + 1;
+                Sino
+                    vacios <- vacios + 1;
+                FinSi
+            FinPara
+            
+            // Calcular porcentaje de ocupación
+            porcentajeOcupacion <- (ocupados / 40) * 100;
+            
+            // Mostrar matriz de asientos
+            Escribir "";
+			Limpiar Pantalla;
+            Escribir "===========================================";
+            Escribir "    ESTADO DE ASIENTOS - ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
+            Escribir "===========================================";
+			ImprimirMatrizAsientos(asientos, destinoElegido);
+            
+            // Mostrar estadísticas
+            Escribir "===========================================";
+            Escribir "ESTADÍSTICAS DE OCUPACIÓN:";
+            Escribir "-------------------------------------------";
+			Escribir "Total de asientos:  ", 40;
+            Escribir "Asientos ocupados: ", ocupados;
+            Escribir "Asientos vacíos:   ", vacios;
+            Escribir "Ocupación: ", Redon(porcentajeOcupacion), "%";
+            
+            
+			Escribir "===========================================";
+			Escribir "Presione cualquier tecla para continuar...";
+			Esperar Tecla;
+			
+		Sino 
+			Si opc = 7 Entonces
+				Escribir "Volviendo al menú anterior...";
+			Sino
+				Escribir "Opción no válida. Intente nuevamente.";
+			FinSi
+		FinSi
+	Hasta Que opc = 7;
+FinSubProceso
+
+
+
+SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros, pasajerosDestino)
+    Definir i, j, destinoIdx, totalVendidos, destinoMasVendido, maxVentas Como Entero;
+    Definir totalRecaudado, promedioVenta, recaudacionPorDestino Como Real;
+    Definir porcentajeVentas Como Real;
+    
+    totalVendidos <- 0;
+    totalRecaudado <- 0;
+    maxVentas <- 0;
+    destinoMasVendido <- 0;
+	i=0;
+	j=0;
+    
+	si TotaldePasajeros>0 Entonces
+		
+		// Calcular totales
+		Para i <- 0 Hasta 5 Hacer
+			totalVendidos <- totalVendidos + ventasPorDestino[i];
+			Si ventasPorDestino[i] > maxVentas Entonces
+				maxVentas <- ventasPorDestino[i];
+				destinoMasVendido <- i;
+			FinSi
+		FinPara
+		
+		// Calcular recaudación total
+		Para i <- 0 Hasta TotaldePasajeros-1 Hacer
+			totalRecaudado <- totalRecaudado + pasajerosPago[i];
+		FinPara
+		
+		// Calcular promedio
+		Si totalVendidos > 0 Entonces
+			promedioVenta <- totalRecaudado / totalVendidos;
+			promedioVenta <- redon(promedioVenta);
+		Sino
+			promedioVenta <- 0;
+		FinSi
+		
+		// Mostrar balance general
+		Limpiar Pantalla;
+		Escribir "===========================================";
+		Escribir "          BALANCE DE TRANSPORTE";
+		Escribir "===========================================";
+		Escribir "-------------------------------------------";
+		Escribir "ESTADÍSTICAS GENERALES:";
+		Escribir "-------------------------------------------";
+		Escribir "Total de pasajes vendidos: ", totalVendidos;
+		Escribir "Total recaudado: $", totalRecaudado;
+		Escribir "Promedio por pasaje: $", promedioVenta;
+		Escribir "Pasajeros en sistema: ", TotaldePasajeros;
+		Escribir "";
+		
+		// Mostrar ventas por destino
+		Escribir "-------------------------------------------";
+		Escribir "VENTAS POR DESTINO:";
+		Escribir "-------------------------------------------";
+		Para i <- 0 Hasta 5 Hacer
+			Si totalVendidos > 0 Entonces
+				porcentajeVentas <- (ventasPorDestino[i] / totalVendidos) * 100;
+			Sino
+				porcentajeVentas <- 0;
+			FinSi
+			
+			// Calcular recaudación por destino
+			recaudacionPorDestino <- 0;
+			Para j <- 0 Hasta TotaldePasajeros-1 Hacer
+				Si pasajerosDestino[j] = i Entonces
+					recaudacionPorDestino <- recaudacionPorDestino + pasajerosPago[j];
+				FinSi
+			FinPara
+			
+			Escribir destinos[i,1], " -> ", destinos[i,2], ":";
+			Escribir "Pasajes: ", ventasPorDestino[i], " (", Redon(porcentajeVentas), "%)";
+			Escribir "Recaudación: $", recaudacionPorDestino;
+			Escribir "";
+		FinPara
+		
+		// Mostrar destino más vendido
+		Escribir "-------------------------------------------";
+		Escribir "DESTINO MÁS POPULAR:";
+		Escribir "-------------------------------------------";
+		Si maxVentas > 0 Entonces
+			Escribir destinos[destinoMasVendido,1], " -> ", destinos[destinoMasVendido,2];
+			Escribir "Con ", maxVentas, " pasajes vendidos";
+			
+			// Mostrar porcentaje del destino más vendido
+			Si totalVendidos > 0 Entonces
+				porcentajeVentas <- (maxVentas / totalVendidos) * 100;
+				Escribir "Representa el ", Redon(porcentajeVentas), "% de las ventas totales";
+			FinSi
+		Sino
+			Escribir "No hay ventas registradas";
+		FinSi
+		
+		// Análisis de ocupación
+		Escribir "";
+		Escribir "-------------------------------------------";
+		Escribir "ANÁLISIS DE OCUPACIÓN:";
+		Escribir "-------------------------------------------";
+		Si totalVendidos > 0 Entonces
+			Escribir "Tasa de ocupación general: ", Redon((totalVendidos / (6 * 40)) * 100), "%";
+			
+			// Encontrar destino con mejor y peor ocupación
+			Definir mejorOcupacion, peorOcupacion, idxMejor, idxPeor Como real;
+			mejorOcupacion <- 0;
+			peorOcupacion <- 100;
+			idxMejor <- 0;
+			idxPeor <- 0;
+			
+			Para i <- 0 Hasta 5 Hacer
+				porcentajeVentas <- (ventasPorDestino[i] / 40) * 100;
+				
+				Si porcentajeVentas > mejorOcupacion Entonces
+					mejorOcupacion <- porcentajeVentas;
+					idxMejor <- i;
+				FinSi
+				
+				Si porcentajeVentas < peorOcupacion Entonces
+					peorOcupacion <- porcentajeVentas;
+					idxPeor <- i;
+				FinSi
+			FinPara
+			
+			Escribir "Mejor ocupación: ", destinos[idxMejor,1], " -> ", destinos[idxMejor,2];
+			Escribir "  (", Redon(mejorOcupacion), "% de asientos vendidos)";
+			Escribir "Menor ocupación: ", destinos[idxPeor,1], " -> ", destinos[idxPeor,2];
+			Escribir "  (", Redon(peorOcupacion), "% de asientos vendidos)";
+		FinSi
+		
+		Escribir "===========================================";
+		Escribir "Presione cualquier tecla para continuar...";
+		Esperar Tecla;
+		Limpiar Pantalla;
+	sino
+		Limpiar Pantalla;
+		Escribir "-------------------------------------------";
+		Escribir "No es posible mostrar balance, no se registraron datos...";
+	FinSi
+FinSubProceso
+
 
 // =======================
 // MENÚ CLIENTE
@@ -172,7 +408,7 @@ FinSubProceso
 // =======================
 // INICIALIZACIÓN
 // =======================
-SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, descuentosFecha)
+SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, descuentosFecha, pasajerosPago, pasajerosDestino)
     Definir i, j Como Entero;
     
     // Inicializar descuentos (0% inicialmente)
@@ -217,6 +453,8 @@ SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, 
     Para i <- 0 Hasta 99 Hacer
         pasajerosDNI[i] <- "";
         pasajerosCodigoQR[i] <- "";
+		pasajerosPago[i] <- 0; 
+		pasajerosDestino[i] <- 0;
     FinPara
     
     TotaldePasajeros <- 0;
@@ -228,7 +466,7 @@ FinSubProceso
 // COMPRAR PASAJE
 // =======================
 SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha, fechasDisponibles, descuentosFecha)
-
+	
     Definir destinoElegido, opcionFecha, descuentoElegido, asientoElegido, filaElegida, colElegida, i, j Como Entero;
     Definir nombre, dni, codigoQR, espera Como Caracter;
     Definir precioBase, precioConDescuento Como Real;
@@ -272,20 +510,7 @@ SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasaje
 	
     // Mapa del avión (10 filas x 4 columnas)
     Escribir "";
-    Escribir "MAPA DEL AVIÓN (O=libre / X=ocupado)";
-    Escribir "    A   B   C   D";
-    Para i <- 0 Hasta 9 Hacer
-        Escribir Sin Saltar "F", (i+1), " ";
-        Para j <- 0 Hasta 3 Hacer
-            asientoElegido <- i*4 + j;
-            Si asientos[destinoElegido, asientoElegido] = 0 Entonces
-                Escribir Sin Saltar "[O] ";
-            Sino
-                Escribir Sin Saltar "[X] ";
-            FinSi
-        FinPara
-        Escribir "";
-    FinPara
+    ImprimirMatrizAsientos(asientos, destinoElegido);
 	
     // Elegir asiento por fila/columna
     asientoDisponible <- Falso;
@@ -339,18 +564,22 @@ SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasaje
 	Escribir "                ?  ", Subcadena(dni,1,5), "  ?";
 	Escribir "                ?  ", ConvertirATexto(asientoElegido+1), "    ?";
 	Escribir "                ????????????";
+	//Esperar 1 Segundos
 	Escribir "_________________________________________";
 	Escribir "Código QR: ", codigoQR;
 	Escribir "_________________________________________";
+	//Esperar 1 Segundos
 	
 	// Confirmación
 	Escribir "===========================================";
 	Escribir "¡RESERVA CONFIRMADA Y PAGADA!";
+	//Esperar 1 Segundos
 	Escribir "Destino: ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
 	Escribir "Fecha: ", pasajerosFecha[TotaldePasajeros];
 	Escribir "Asiento (número interno): ", (asientoElegido + 1);
 	Escribir "Precio final: $", precioConDescuento;
 	Escribir "===========================================";
+	//Esperar 1 Segundos
 	
     // Contadores
     TotaldePasajeros <- TotaldePasajeros + 1;
@@ -361,7 +590,7 @@ FinSubProceso
 // CONTROL TICKET
 // =======================
 SubProceso ControlTicket(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha)
-
+	
     Definir i, encontrado, destinoIdx Como Entero;
     Definir dniBuscado Como Caracter;
 	
@@ -407,7 +636,7 @@ FinSubProceso
 // CANCELAR PASAJE
 // =======================
 SubProceso CancelarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha)
-
+	
     Definir dniBuscado, confirmacion Como Caracter;
     Definir i, encontrado, destinoIdx, asientoIdx Como Entero;
 	
@@ -475,6 +704,7 @@ FinSubProceso
 SubProceso ListaPasajeros(pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, destinos, TotaldePasajeros Por Referencia, pasajerosFecha)
     Definir i, destinoIdx Como Entero;
 	
+	Limpiar Pantalla;
     Escribir "===========================================";
     Escribir "           LISTA DE PASAJEROS";
     Escribir "===========================================";
