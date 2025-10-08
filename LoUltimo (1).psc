@@ -1,49 +1,29 @@
 Proceso TerminalAutogestion
-    // =======================
-    // VARIABLES GLOBALES
-    // =======================
-    Definir destinos Como Caracter;
-    Dimension destinos[6,4];
-    
-    Definir asientos Como Entero;
-    Dimension asientos[6,40]; // 10 filas x 4 columnas = 40 asientos por destino
-    
-    Definir pasajerosNombre Como Caracter;
+    // ==============
+    // VARIABLES 
+    // ==============
+
+    Definir asientos, pasajerosDestino, pasajerosAsiento, TotaldePasajeros, ventasPorDestino, opc Como Entero;
+    Definir destinos, pasajerosNombre,pasajerosDNI, pasajerosCodigoQR, pasajerosFecha, fechasDisponibles Como Caracter;
+	Definir pasajerosPago Como Real;
+	Definir pasajerosPagado, auth Como Logico;
+	Dimension destinos[6,4];
+	Dimension asientos[6,40]; 
     Dimension pasajerosNombre[100];
-    Definir pasajerosDNI Como Caracter;
     Dimension pasajerosDNI[100];
-    Definir pasajerosDestino Como Entero;
     Dimension pasajerosDestino[100];
-    Definir pasajerosAsiento Como Entero;
     Dimension pasajerosAsiento[100];
-    Definir pasajerosPago Como Real;
     Dimension pasajerosPago[100];
-    Definir pasajerosPagado Como Logico;
     Dimension pasajerosPagado[100];
-    Definir pasajerosCodigoQR Como Caracter;
     Dimension pasajerosCodigoQR[100];
-    Definir pasajerosFecha Como Caracter;
     Dimension pasajerosFecha[100];
-    Definir TotaldePasajeros Como Entero;
-    
-    // Fechas y descuentos
-    Definir fechasDisponibles Como Caracter;
     Dimension fechasDisponibles[6,10];
-	
-    // Descuentos por destino
-    Definir descuentos Como Real;
-    Dimension descuentos[6];
-    
-    Definir ventasPorDestino Como Entero;
     Dimension ventasPorDestino[6];
-    Definir totalVentas Como Real;
-    
-    Definir opc Como Entero;
-    Definir auth Como Logico;
-    
+
     // Inicializar
-	InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
+	InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
     
+	// MENU PRINCIPAL DE USUARIOS
     Repetir
         Escribir "===========================================";
         Escribir "    TERMINAL DE AUTOGESTIÓN DE PASAJES";
@@ -58,7 +38,7 @@ Proceso TerminalAutogestion
         Segun opc Hacer
             1:
                 Escribir "Acceso como CLIENTE";
-				MenuCliente(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);               
+				MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);               
 			2:
 				Escribir "Acceso como ADMINISTRADOR";
 				auth <- AutenticarAdmin();
@@ -73,17 +53,16 @@ Proceso TerminalAutogestion
     Hasta Que opc = 3;
 FinProceso
 
+// =======================
+// SUBPROCESOS
+// =======================
+
 
 // =======================
 // INICIALIZACIÓN
 // =======================
-SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino)
+SubProceso InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino)
     Definir i, j Como Entero;
-    
-    // Inicializar descuentos (0% inicialmente)
-    Para i <- 0 Hasta 5 Hacer
-        descuentos[i] <- 0;
-    FinPara
     
     // Destinos
     destinos[0,0] = "1"; destinos[0,1] = "BUENOS AIRES"; destinos[0,2] = "JUJUY"; destinos[0,3] = "15000";
@@ -93,9 +72,9 @@ SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, 
     destinos[4,0] = "5"; destinos[4,1] = "SANTA CRUZ"; destinos[4,2] = "BUENOS AIRES"; destinos[4,3] = "18000";
     destinos[5,0] = "6"; destinos[5,1] = "MISIONES"; destinos[5,2] = "BUENOS AIRES"; destinos[5,3] = "12000";
     
-    // Fechas disponibles (solo 1 fecha por destino, sin descuentos)
+    // Fechas disponibles 
     Para i <- 0 Hasta 5 Hacer
-        fechasDisponibles[i,0] <- "15/11/2025"; // Solo una fecha fija para todos los destinos
+        fechasDisponibles[i,0] <- convertiratexto(aleatorio(1,30)) + "/11/2025"; 
     FinPara
     
     // Asientos (todos libres)
@@ -115,9 +94,7 @@ SubProceso InicializarSistema(destinos, asientos, descuentos, ventasPorDestino, 
         pasajerosPago[i] <- 0; 
         pasajerosDestino[i] <- 0;
     FinPara
-    
     TotaldePasajeros <- 0;
-    totalVentas <- 0;
 FinSubProceso
 
 // =======================
@@ -165,7 +142,7 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
         
         Segun opc Hacer
             1: 
-				BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros, pasajerosDestino);
+				BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros);
             2: 
 				EstadoAsientos(destinos, asientos);
             3: 
@@ -182,24 +159,44 @@ SubProceso ImprimirMatrizAsientos(asientos, destinoElegido)
     Definir i, j, asientoActual Como Entero;
     
     Escribir "MAPA DEL AVIÓN (O=libre / X=ocupado)";
-    Escribir "     A    B    C    D";
+	Escribir "         ______";
+	Escribir "       /        \";
+	Escribir "     /           \";
+    Escribir "    /A  B     C  D\";
     
     Para i <- 0 Hasta 9 Hacer
-		si i = 9 Entonces
-			Escribir Sin Saltar "F", (i+1), "";
-		SiNo
-			Escribir Sin Saltar "F", (i+1), " ";
-		FinSi
-        Para j <- 0 Hasta 3 Hacer
+        si i = 9 Entonces
+            Escribir Sin Saltar "F", (i+1), " ";
+        SiNo
+            Escribir Sin Saltar "F", (i+1), "  ";
+        FinSi
+        
+        // Lado izquierdo
+        Para j <- 0 Hasta 1 Hacer
             asientoActual <- i*4 + j;
             Si asientos[destinoElegido, asientoActual] = 0 Entonces
-                Escribir Sin Saltar " [O] ";
+                Escribir Sin Saltar "[O]";
             Sino
-                Escribir Sin Saltar " [X] ";
+                Escribir Sin Saltar "[X]";
             FinSi
         FinPara
+        
+        Escribir Sin Saltar " | "; // Pasillo
+        
+        // Lado derecho
+        Para j <- 2 Hasta 3 Hacer
+            asientoActual <- i*4 + j;
+            Si asientos[destinoElegido, asientoActual] = 0 Entonces
+                Escribir Sin Saltar "[O]";
+            Sino
+                Escribir Sin Saltar "[X]";
+            FinSi
+        FinPara
+        
         Escribir "";
     FinPara
+	Escribir "     \           /";
+	Escribir "      \         /";
 FinSubProceso
 
 SubProceso EstadoAsientos(destinos, asientos)
@@ -262,7 +259,7 @@ SubProceso EstadoAsientos(destinos, asientos)
 			
 		Sino 
 			Si opc = 7 Entonces
-				//Esperar 1 Segundos;
+				Esperar 1 Segundos;
 				Escribir "Volviendo al menú anterior...";
 				Limpiar Pantalla;
 			Sino
@@ -273,7 +270,7 @@ SubProceso EstadoAsientos(destinos, asientos)
 FinSubProceso
 
 
-SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros, pasajerosDestino)
+SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros)
     Definir i, j, destinoIdx, totalVendidos, destinoMasVendido, maxVentas Como Entero;
     Definir totalRecaudado, promedioVenta, recaudacionPorDestino Como Real;
     Definir porcentajeVentas Como Real;
@@ -452,7 +449,7 @@ FinSubProceso
 // =======================
 // MENÚ CLIENTE
 // =======================
-SubProceso MenuCliente(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, fechasDisponibles, pasajerosFecha)    
+SubProceso MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, fechasDisponibles, pasajerosFecha)    
     Repetir
         Escribir "===========================================";
         Escribir "            MENÚ CLIENTE";
@@ -469,7 +466,7 @@ SubProceso MenuCliente(destinos, descuentos, asientos, pasajerosNombre, pasajero
         Segun opc1 Hacer
             1:
                 Escribir "Compra de pasaje";
-				ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha, fechasDisponibles);                
+				ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha, fechasDisponibles);                
 				Escribir "Control de ticket";
 			2:	
 				Escribir "Control de ticket";
@@ -493,7 +490,7 @@ FinSubProceso
 // =======================
 // COMPRAR PASAJE
 // =======================
-SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha, fechasDisponibles)
+SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha, fechasDisponibles)
     
     Definir destinoElegido, asientoElegido, filaElegida, colElegida, i, j Como Entero;
     Definir nombre, dni, codigoQR Como Caracter;
@@ -513,7 +510,7 @@ SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasaje
 		Si destinoElegido < 0 O destinoElegido > 5 Entonces
 			Escribir "Destino no válido.";
 		FinSi
-	Hasta Que destinoElegido > 0 O destinoElegido < 5
+	Hasta Que destinoElegido >= 0 Y destinoElegido <= 5
     
     
     // Fecha fija (solo hay una disponible)
@@ -562,36 +559,36 @@ SubProceso ComprarPasaje(destinos, descuentos, asientos, pasajerosNombre, pasaje
     pasajerosDNI[TotaldePasajeros] <- dni;
     pasajerosDestino[TotaldePasajeros] <- destinoElegido;
     pasajerosAsiento[TotaldePasajeros] <- asientoElegido;
-    pasajerosPago[TotaldePasajeros] <- precioBase; // Precio sin descuentos
+    pasajerosPago[TotaldePasajeros] <- precioBase; 
     pasajerosPagado[TotaldePasajeros] <- Verdadero;
     
     // Generar QR
     codigoQR <- "TERMINAL|" + dni + "|" + ConvertirATexto(destinoElegido+1) + "|" + ConvertirATexto(asientoElegido+1);
     pasajerosCodigoQR[TotaldePasajeros] <- codigoQR;
     
-    // Mostrar QR simple
+    // Mostrar QR
     Escribir "_________________________________________";
-    Escribir "                ????????????";
-    Escribir "                ?   QR     ?";
-    Escribir "                ?  CODE    ?";
-    Escribir "                ?          ?";
-    Escribir "                ?  ", Subcadena(dni,1,5), "  ?";
-    Escribir "                ?  ", ConvertirATexto(asientoElegido+1), "    ?";
-    Escribir "                ????????????";
+    Escribir "                ## ## #####  #####";
+    Escribir "                ### #   QR   #####";
+    Escribir "                # # #        ## ##";
+    Escribir "                # ###        # ###";
+    Escribir "                ### #  ", Subcadena(dni,1,5), " # ###";
+    Escribir "                # ###    ", ConvertirATexto(asientoElegido+1), "   # # #";
+    Escribir "                ## ## ##### ###  #";
     Escribir "_________________________________________";
     Escribir "Código QR: ", codigoQR;
     Escribir "_________________________________________";
-    //esperar 1 Segundos;
+    esperar 1 Segundos;
     // Confirmación
     Escribir "===========================================";
     Escribir "¡RESERVA CONFIRMADA Y PAGADA!";
-	//esperar 2 Segundos;
+	esperar 2 Segundos;
     Escribir "Destino: ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
     Escribir "Fecha: ", pasajerosFecha[TotaldePasajeros];
     Escribir "Asiento (número interno): ", (asientoElegido + 1);
     Escribir "Precio final: $", precioBase;
     Escribir "===========================================";
-    //esperar 2 Segundos;
+    esperar 2 Segundos;
     // Contadores
     TotaldePasajeros <- TotaldePasajeros + 1;
     ventasPorDestino[destinoElegido] <- ventasPorDestino[destinoElegido] + 1;
@@ -640,7 +637,7 @@ SubProceso ControlTicket(destinos, asientos, pasajerosNombre, pasajerosDNI, pasa
             Escribir "Estado: PENDIENTE DE PAGO";
         FinSi
         Escribir "===========================================";
-		//esperar 2 Segundos;
+		esperar 2 Segundos;
     FinSi
 FinSubProceso
 
@@ -687,7 +684,7 @@ SubProceso CancelarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pas
         Sino
             Escribir "Cancelación abortada.";
         FinSi
-		//esperar 2 Segundos;
+		esperar 2 Segundos;
     FinSi
 FinSubProceso
 
@@ -710,5 +707,5 @@ SubProceso Partidas(destinos, asientos)
         Escribir destinos[i,1], " -> ", destinos[i,2], " | Asientos libres: ", libres;
     FinPara
     Escribir "===========================================";
-	//Esperar 2 Segundos;
+	Esperar 2 Segundos;
 FinSubProceso
