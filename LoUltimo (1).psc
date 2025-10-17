@@ -2,13 +2,13 @@ Proceso TerminalAutogestion
     // ==============
     // VARIABLES 
     // ==============
-
     Definir asientos, pasajerosDestino, pasajerosAsiento, TotaldePasajeros, ventasPorDestino, opc Como Entero;
-    Definir destinos, pasajerosNombre,pasajerosDNI, pasajerosCodigoQR, pasajerosFecha, fechasDisponibles Como Caracter;
-	Definir pasajerosPago Como Real;
-	Definir pasajerosPagado, auth Como Logico;
-	Dimension destinos[6,4];
-	Dimension asientos[6,40]; 
+    Definir destinos, pasajerosNombre, pasajerosDNI, pasajerosCodigoQR, pasajerosFecha, fechasDisponibles Como Caracter;
+    Definir pasajerosPago Como Real;
+    Definir pasajerosPagado, auth Como Logico;
+	
+    Dimension destinos[6,4];
+    Dimension asientos[6,40]; 
     Dimension pasajerosNombre[100];
     Dimension pasajerosDNI[100];
     Dimension pasajerosDestino[100];
@@ -19,11 +19,11 @@ Proceso TerminalAutogestion
     Dimension pasajerosFecha[100];
     Dimension fechasDisponibles[6,10];
     Dimension ventasPorDestino[6];
-
+	
     // Inicializar
-	InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
+    InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
     
-	// MENU PRINCIPAL DE USUARIOS
+    // MENU PRINCIPAL DE USUARIOS
     Repetir
         Escribir "===========================================";
         Escribir "    TERMINAL DE AUTOGESTIÓN DE PASAJES";
@@ -32,16 +32,17 @@ Proceso TerminalAutogestion
         Escribir "2. Administrador";
         Escribir "3. Salir";
         Escribir "-------------------------------------------";
-        Escribir Sin Saltar "Seleccione su tipo de usuario: ";
-        Leer opc;
+       
+        // [CAMBIO] Lectura validada (evita letras/signos/vacío)
+        opc <- LeerNumeroEnRango("Seleccione su tipo de usuario: ", 1, 3, 2);
         
         Segun opc Hacer
             1:
                 Escribir "Acceso como CLIENTE";
-				MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);               
-			2:
-				Escribir "Acceso como ADMINISTRADOR";
-				auth <- AutenticarAdmin();
+                MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);               
+            2:
+                Escribir "Acceso como ADMINISTRADOR";
+                auth <- AutenticarAdmin();
                 Si auth Entonces
                     MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha);
                 FinSi;
@@ -53,10 +54,161 @@ Proceso TerminalAutogestion
     Hasta Que opc = 3;
 FinProceso
 
+
 // =======================
 // SUBPROCESOS
 // =======================
 
+// ======= VALIDACIONES BÁSICAS =======
+// [AGREGADO]
+// QuitarEspacios (sin Romper y sin indexar cadenas)
+Funcion texto_sin_espacios <- QuitarEspacios(texto_ingresado)
+    Definir inicio, ultimo Como Entero;
+    Definir ch Como Caracter;
+    inicio <- 0;
+    ultimo <- Longitud(texto_ingresado) - 1;
+	
+    // quitar espacios al inicio
+    Mientras inicio <= ultimo Y Subcadena(texto_ingresado, inicio, inicio) = " " Hacer
+        inicio <- inicio + 1;
+    FinMientras
+	
+    // quitar espacios al final
+    Mientras ultimo >= inicio Y Subcadena(texto_ingresado, ultimo, ultimo) = " " Hacer
+        ultimo <- ultimo - 1;
+    FinMientras
+	
+    Si ultimo < inicio Entonces
+        texto_sin_espacios <- "";
+    SiNo
+        texto_sin_espacios <- Subcadena(texto_ingresado, inicio, ultimo);
+    FinSi
+FinFuncion
+
+
+// TieneSoloDigitos (sin indexar cadenas)
+Funcion es_valido <- TieneSoloDigitos(texto_ingresado)
+    Definir i Como Entero;
+    Definir ch Como Caracter;
+    texto_ingresado <- QuitarEspacios(texto_ingresado);
+    es_valido <- (Longitud(texto_ingresado) > 0);
+    Para i <- 0 Hasta Longitud(texto_ingresado)-1 Hacer
+        ch <- Subcadena(texto_ingresado, i, i);
+        Si No (ch >= "0" Y ch <= "9") Entonces
+            es_valido <- Falso;
+        FinSi
+    FinPara
+FinFuncion
+// DejarSoloDigitos (sin indexar cadenas)
+Funcion solo_numeros <- DejarSoloDigitos(texto_ingresado)
+    Definir i Como Entero;
+    Definir ch Como Caracter;
+    solo_numeros <- "";
+    Para i <- 0 Hasta Longitud(texto_ingresado)-1 Hacer
+        ch <- Subcadena(texto_ingresado, i, i);
+        Si ch >= "0" Y ch <= "9" Entonces
+            solo_numeros <- solo_numeros + ch;
+        FinSi
+    FinPara
+FinFuncion
+
+// ======= LECTURAS SEGURAS =======
+// [AGREGADO]
+Funcion numer <- LeerNumeroEnRango(mensaje, minimo, maximo, largo_max)
+    Definir ok Como Logico;
+    Definir entrada Como Caracter;
+    Definir valores Como Entero;
+    Repetir
+        Escribir Sin Saltar mensaje;
+        Leer entrada;
+        entrada <- QuitarEspacios(entrada);
+        ok <- (Longitud(entrada) > 0 Y Longitud(entrada) <= largo_max Y TieneSoloDigitos(entrada));
+        Si ok Entonces
+            valores <- ConvertirANumero(entrada);
+            ok <- (valores >= minimo Y valores <= maximo);
+        FinSi
+        Si No ok Entonces
+            Escribir "Inválido. Ingresá un número entre ", minimo, " y ", maximo, ".";
+        FinSi
+    Hasta Que ok
+    numer <- valores;
+FinFuncion
+
+
+Funcion dni <- LeerDNIValido
+    Definir entrada, limpio Como Caracter;
+    Definir ok Como Logico;
+	
+    Repetir
+        Escribir Sin Saltar "DNI (8 dígitos): ";
+        Leer entrada;
+        entrada <- QuitarEspacios(entrada);
+        limpio <- DejarSoloDigitos(entrada)  ; // quita espacios/puntos/guiones
+        ok <- (Longitud(limpio) = 8);
+        Si No ok Entonces
+            Escribir "DNI inválido: deben ser exactamente 8 dígitos.";
+        FinSi
+    Hasta Que ok
+	
+    dni <- limpio;
+FinFuncion
+
+// [AGREGADO]
+Funcion respuesta <- LeerConfirmacionSN(mensaje)
+    Definir entrada Como Caracter;
+    Repetir
+        Escribir Sin Saltar mensaje, " (S/N): ";
+        Leer entrada;
+        entrada <- Mayusculas(QuitarEspacios(entrada));
+    Hasta Que entrada = "S" O entrada = "N"
+    respuesta <- entrada;
+FinFuncion
+
+Funcion nombre <- LeerNombreValido(mensaje)
+    Definir entrada, ch Como Caracter;
+    Definir i Como Entero;
+    Definir ok Como Logico;
+	
+    Repetir
+        Escribir Sin Saltar mensaje;
+        Leer entrada;
+        entrada <- QuitarEspacios(entrada);
+		
+        ok <- (Longitud(entrada) > 0);
+        Si ok Entonces
+            ok <- Verdadero;
+            Para i <- 0 Hasta Longitud(entrada)-1 Hacer
+                ch <- Subcadena(entrada, i, i);  // <- obtener 1 carácter
+                // inválido si NO es letra (A-Z/a-z) NI espacio
+                Si No ( (ch >= "A" Y ch <= "Z") O (ch >= "a" Y ch <= "z") O (ch = " ") ) Entonces
+                    ok <- Falso;
+                FinSi
+            FinPara
+        FinSi
+		
+        Si No ok Entonces
+            Escribir "Nombre inválido (solo letras y espacios).";
+        FinSi
+    Hasta Que ok
+	
+    nombre <- entrada;
+FinFuncion
+
+
+// Busca si un DNI ya existe en el arreglo (sin FinFuncion temprano)
+Funcion existe <- DniExiste(pasajerosDNI, totalPasajeros, dniBuscado)
+    Definir i Como Entero;
+    existe <- Falso;
+	
+    // ojo: usar <= y >= ASCII, no símbolos Unicode
+    Si totalPasajeros > 0 Entonces
+        Para i <- 0 Hasta totalPasajeros - 1 Hacer
+            Si pasajerosDNI[i] = dniBuscado Entonces
+                existe <- Verdadero;
+            FinSi
+        FinPara
+    FinSi
+FinFuncion
 
 // =======================
 // INICIALIZACIÓN
@@ -74,7 +226,8 @@ SubProceso InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasaj
     
     // Fechas disponibles 
     Para i <- 0 Hasta 5 Hacer
-        fechasDisponibles[i,0] <- convertiratexto(aleatorio(1,30)) + "/11/2025"; 
+        // [CAMBIO] Consistencia de mayúsculas
+        fechasDisponibles[i,0] <- ConvertirATexto(Aleatorio(1,30)) + "/11/2025"; 
     FinPara
     
     // Asientos (todos libres)
@@ -97,13 +250,14 @@ SubProceso InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasaj
     TotaldePasajeros <- 0;
 FinSubProceso
 
+
 // =======================
 // LOGIN ADMIN
 // =======================
-
 SubProceso accesoAdmin <- AutenticarAdmin
     Definir accesoAdmin Como Logico;
-    Definir usuario, clave Como Cadena;
+    // [CAMBIO] Tipo correcto
+    Definir usuario, clave Como Caracter;
     
     accesoAdmin <- Falso;
     Escribir "-------------------------------------------";
@@ -121,10 +275,10 @@ SubProceso accesoAdmin <- AutenticarAdmin
     FinSi
 FinSubProceso
 
+
 // =======================
 // MENÚ ADMIN
 // =======================
-
 SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha)
     Definir opc Como Entero;
     
@@ -137,14 +291,14 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
         Escribir "3. Ver lista de pasajeros";
         Escribir "4. Volver al menú principal";
         Escribir "-------------------------------------------";
-        Escribir Sin Saltar "Seleccione una opción: ";
-        Leer opc;
+        // [CAMBIO] Lectura validada
+        opc <- LeerNumeroEnRango("Seleccione una opción: ", 1, 4, 2);
         
         Segun opc Hacer
             1: 
-				BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros);
+                BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasajerosPago, TotaldePasajeros);
             2: 
-				EstadoAsientos(destinos, asientos);
+                EstadoAsientos(destinos, asientos);
             3: 
                 Escribir "Listado de pasajeros";
                 ListaPasajeros(pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, destinos, TotaldePasajeros, pasajerosFecha);
@@ -154,18 +308,20 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
     Hasta Que opc = 4;
 FinSubProceso
 
+
 // imprime matriz de asientos
 SubProceso ImprimirMatrizAsientos(asientos, destinoElegido)
     Definir i, j, asientoActual Como Entero;
     
     Escribir "MAPA DEL AVIÓN (O=libre / X=ocupado)";
-	Escribir "         ______";
-	Escribir "       /        \";
-	Escribir "     /           \";
-    Escribir "    /A  B     C  D\";
+    Escribir "         ______";
+    // Evitamos '\'+comillas al final de la cadena: dejamos 1 espacio luego de la barra
+    Escribir "       /        \ ";
+    Escribir "     /           \ ";
+    Escribir "    /A  B     C  D\ ";
     
     Para i <- 0 Hasta 9 Hacer
-        si i = 9 Entonces
+        Si i = 9 Entonces
             Escribir Sin Saltar "F", (i+1), " ";
         SiNo
             Escribir Sin Saltar "F", (i+1), "  ";
@@ -181,7 +337,7 @@ SubProceso ImprimirMatrizAsientos(asientos, destinoElegido)
             FinSi
         FinPara
         
-        Escribir Sin Saltar " | "; // Pasillo
+        Escribir Sin Saltar " | " ;// Pasillo;
         
         // Lado derecho
         Para j <- 2 Hasta 3 Hacer
@@ -195,9 +351,12 @@ SubProceso ImprimirMatrizAsientos(asientos, destinoElegido)
         
         Escribir "";
     FinPara
-	Escribir "     \           /";
-	Escribir "      \         /";
+	
+    // Estas líneas no terminan con '\', así que no dan error
+    Escribir "     \           /";
+    Escribir "      \         /";
 FinSubProceso
+
 
 SubProceso EstadoAsientos(destinos, asientos)
     Definir opc, destinoElegido, i, j, asientoActual, ocupados, vacios Como Entero;
@@ -215,7 +374,8 @@ SubProceso EstadoAsientos(destinos, asientos)
         Escribir "7. Volver al menú anterior";
         Escribir "-------------------------------------------";
         Escribir Sin Saltar "Seleccione una opción: ";
-        Leer opc;
+        // [CAMBIO] Lectura validada
+        opc <- LeerNumeroEnRango("Seleccione una opción: ", 1, 7, 2);
         
         Si opc >= 1 Y opc <= 6 Entonces
             destinoElegido <- opc - 1;
@@ -232,41 +392,40 @@ SubProceso EstadoAsientos(destinos, asientos)
                 FinSi
             FinPara
             
-            // Calcular porcentaje de ocupación
-            porcentajeOcupacion <- (ocupados / 40) * 100;
+            // [CAMBIO] Porcentaje con reales
+            porcentajeOcupacion <- (ocupados / 40.0) * 100;
             
             // Mostrar matriz de asientos
             Escribir "";
-			Limpiar Pantalla;
+            Limpiar Pantalla;
             Escribir "===========================================";
             Escribir "    ESTADO DE ASIENTOS - ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
             Escribir "===========================================";
-			ImprimirMatrizAsientos(asientos, destinoElegido);
+            ImprimirMatrizAsientos(asientos, destinoElegido);
             
             // Mostrar estadísticas
             Escribir "===========================================";
             Escribir "ESTADÍSTICAS DE OCUPACIÓN:";
             Escribir "-------------------------------------------";
-			Escribir "Total de asientos:  ", 40;
+            Escribir "Total de asientos:  ", 40;
             Escribir "Asientos ocupados: ", ocupados;
             Escribir "Asientos vacíos:   ", vacios;
             Escribir "Ocupación: ", Redon(porcentajeOcupacion), "%";
             
+            Escribir "===========================================";
+            Escribir "Presione cualquier tecla para continuar...";
+            Esperar Tecla;
             
-			Escribir "===========================================";
-			Escribir "Presione cualquier tecla para continuar...";
-			Esperar Tecla;
-			
-		Sino 
-			Si opc = 7 Entonces
-				Esperar 1 Segundos;
-				Escribir "Volviendo al menú anterior...";
-				Limpiar Pantalla;
-			Sino
-				Escribir "Opción no válida. Intente nuevamente.";
-			FinSi
-		FinSi
-	Hasta Que opc = 7;
+        Sino 
+            Si opc = 7 Entonces
+                Esperar 1 Segundos;
+                Escribir "Volviendo al menú anterior...";
+                Limpiar Pantalla;
+            Sino
+                Escribir "Opción no válida. Intente nuevamente.";
+            FinSi
+        FinSi
+    Hasta Que opc = 7;
 FinSubProceso
 
 
@@ -279,133 +438,134 @@ SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasaj
     totalRecaudado <- 0;
     maxVentas <- 0;
     destinoMasVendido <- 0;
-	i=0;
-	j=0;
+    i <- 0;
+    j <- 0;
     
-	si TotaldePasajeros>0 Entonces
-		
-		// Calcular totales
-		Para i <- 0 Hasta 5 Hacer
-			totalVendidos <- totalVendidos + ventasPorDestino[i];
-			Si ventasPorDestino[i] > maxVentas Entonces
-				maxVentas <- ventasPorDestino[i];
-				destinoMasVendido <- i;
-			FinSi
-		FinPara
-		
-		// Calcular recaudación total
-		Para i <- 0 Hasta TotaldePasajeros-1 Hacer
-			totalRecaudado <- totalRecaudado + pasajerosPago[i];
-		FinPara
-		
-		// Calcular promedio
-		Si totalVendidos > 0 Entonces
-			promedioVenta <- totalRecaudado / totalVendidos;
-			promedioVenta <- redon(promedioVenta);
-		Sino
-			promedioVenta <- 0;
-		FinSi
-		
-		// Mostrar balance general
-		Limpiar Pantalla;
-		Escribir "===========================================";
-		Escribir "          BALANCE DE TRANSPORTE";
-		Escribir "===========================================";
-		Escribir "-------------------------------------------";
-		Escribir "ESTADÍSTICAS GENERALES:";
-		Escribir "-------------------------------------------";
-		Escribir "Total de pasajes vendidos: ", totalVendidos;
-		Escribir "Total recaudado: $", totalRecaudado;
-		Escribir "Promedio por pasaje: $", promedioVenta;
-		Escribir "Pasajeros en sistema: ", TotaldePasajeros;
-		Escribir "";
-		
-		// Mostrar ventas por destino
-		Escribir "-------------------------------------------";
-		Escribir "VENTAS POR DESTINO:";
-		Escribir "-------------------------------------------";
-		Para i <- 0 Hasta 5 Hacer
-			Si totalVendidos > 0 Entonces
-				porcentajeVentas <- (ventasPorDestino[i] / totalVendidos) * 100;
-			Sino
-				porcentajeVentas <- 0;
-			FinSi
-			
-			// Calcular recaudación por destino
-			recaudacionPorDestino <- 0;
-			Para j <- 0 Hasta TotaldePasajeros-1 Hacer
-				Si pasajerosDestino[j] = i Entonces
-					recaudacionPorDestino <- recaudacionPorDestino + pasajerosPago[j];
-				FinSi
-			FinPara
-			
-			Escribir destinos[i,1], " -> ", destinos[i,2], ":";
-			Escribir "Pasajes: ", ventasPorDestino[i], " (", Redon(porcentajeVentas), "%)";
-			Escribir "Recaudación: $", recaudacionPorDestino;
-			Escribir "";
-		FinPara
-		
-		// Mostrar destino más vendido
-		Escribir "-------------------------------------------";
-		Escribir "DESTINO MÁS POPULAR:";
-		Escribir "-------------------------------------------";
-		Si maxVentas > 0 Entonces
-			Escribir destinos[destinoMasVendido,1], " -> ", destinos[destinoMasVendido,2];
-			Escribir "Con ", maxVentas, " pasajes vendidos";
-			
-			// Mostrar porcentaje del destino más vendido
-			Si totalVendidos > 0 Entonces
-				porcentajeVentas <- (maxVentas / totalVendidos) * 100;
-				Escribir "Representa el ", Redon(porcentajeVentas), "% de las ventas totales";
-			FinSi
-		Sino
-			Escribir "No hay ventas registradas";
-		FinSi
-		
-		// Análisis de ocupación
-		Escribir "";
-		Escribir "-------------------------------------------";
-		Escribir "ANÁLISIS DE OCUPACIÓN:";
-		Escribir "-------------------------------------------";
-		Si totalVendidos > 0 Entonces
-			Escribir "Tasa de ocupación general: ", Redon((totalVendidos / (6 * 40)) * 100), "%";
-			
-			// Encontrar destino con mejor y peor ocupación
-			Definir mejorOcupacion, peorOcupacion, idxMejor, idxPeor Como real;
-			mejorOcupacion <- 0;
-			peorOcupacion <- 100;
-			idxMejor <- 0;
-			idxPeor <- 0;
-			
-			Para i <- 0 Hasta 5 Hacer
-				porcentajeVentas <- (ventasPorDestino[i] / 40) * 100;
-				
-				Si porcentajeVentas > mejorOcupacion Entonces
-					mejorOcupacion <- porcentajeVentas;
-					idxMejor <- i;
-				FinSi
-				
-				Si porcentajeVentas < peorOcupacion Entonces
-					peorOcupacion <- porcentajeVentas;
-					idxPeor <- i;
-				FinSi
-			FinPara
-			
-			Escribir "Mejor ocupación: ", destinos[idxMejor,1], " -> ", destinos[idxMejor,2];
-			Escribir "  (", Redon(mejorOcupacion), "% de asientos vendidos)";
-			Escribir "Menor ocupación: ", destinos[idxPeor,1], " -> ", destinos[idxPeor,2];
-			Escribir "  (", Redon(peorOcupacion), "% de asientos vendidos)";
-		FinSi
-		
-		Escribir "===========================================";
-		Escribir "Presione cualquier tecla para continuar...";
-		Esperar Tecla;
-		Limpiar Pantalla;
-	sino
-		Limpiar Pantalla;
-		Escribir "-------------------------------------------";
-		Escribir "No es posible mostrar balance, no se registraron datos...";
-	FinSi
+    Si TotaldePasajeros > 0 Entonces
+        // Calcular totales
+        Para i <- 0 Hasta 5 Hacer
+            totalVendidos <- totalVendidos + ventasPorDestino[i];
+            Si ventasPorDestino[i] > maxVentas Entonces
+                maxVentas <- ventasPorDestino[i];
+                destinoMasVendido <- i;
+            FinSi
+        FinPara
+        
+        // Calcular recaudación total
+        Para i <- 0 Hasta TotaldePasajeros-1 Hacer
+            totalRecaudado <- totalRecaudado + pasajerosPago[i];
+        FinPara
+        
+        // Calcular promedio
+        Si totalVendidos > 0 Entonces
+            promedioVenta <- totalRecaudado / totalVendidos;
+            promedioVenta <- Redon(promedioVenta);
+        Sino
+            promedioVenta <- 0;
+        FinSi
+        
+        // Mostrar balance general
+        Limpiar Pantalla;
+        Escribir "===========================================";
+        Escribir "          BALANCE DE TRANSPORTE";
+        Escribir "===========================================";
+        Escribir "-------------------------------------------";
+        Escribir "ESTADÍSTICAS GENERALES:";
+        Escribir "-------------------------------------------";
+        Escribir "Total de pasajes vendidos: ", totalVendidos;
+        Escribir "Total recaudado: $", totalRecaudado;
+        Escribir "Promedio por pasaje: $", promedioVenta;
+        Escribir "Pasajeros en sistema: ", TotaldePasajeros;
+        Escribir "";
+        
+        // Mostrar ventas por destino
+        Escribir "-------------------------------------------";
+        Escribir "VENTAS POR DESTINO:";
+        Escribir "-------------------------------------------";
+        Para i <- 0 Hasta 5 Hacer
+            Si totalVendidos > 0 Entonces
+                porcentajeVentas <- (ventasPorDestino[i] / totalVendidos) * 100;
+            Sino
+                porcentajeVentas <- 0;
+            FinSi
+            
+            // Calcular recaudación por destino
+            recaudacionPorDestino <- 0;
+            Para j <- 0 Hasta TotaldePasajeros-1 Hacer
+                Si pasajerosDestino[j] = i Entonces
+                    recaudacionPorDestino <- recaudacionPorDestino + pasajerosPago[j];
+                FinSi
+            FinPara
+            
+            Escribir destinos[i,1], " -> ", destinos[i,2], ":";
+            Escribir "Pasajes: ", ventasPorDestino[i], " (", Redon(porcentajeVentas), "%)";
+            Escribir "Recaudación: $", recaudacionPorDestino;
+            Escribir "";
+        FinPara
+        
+        // Mostrar destino más vendido
+        Escribir "-------------------------------------------";
+        Escribir "DESTINO MÁS POPULAR:";
+        Escribir "-------------------------------------------";
+        Si maxVentas > 0 Entonces
+            Escribir destinos[destinoMasVendido,1], " -> ", destinos[destinoMasVendido,2];
+            Escribir "Con ", maxVentas, " pasajes vendidos";
+            
+            // Mostrar porcentaje del destino más vendido
+            Si totalVendidos > 0 Entonces
+                porcentajeVentas <- (maxVentas / totalVendidos) * 100;
+                Escribir "Representa el ", Redon(porcentajeVentas), "% de las ventas totales";
+            FinSi
+        Sino
+            Escribir "No hay ventas registradas";
+        FinSi
+        
+        // Análisis de ocupación
+        Escribir "";
+        Escribir "-------------------------------------------";
+        Escribir "ANÁLISIS DE OCUPACIÓN:";
+        Escribir "-------------------------------------------";
+        Si totalVendidos > 0 Entonces
+            // [CAMBIO] Real en denominador
+            Escribir "Tasa de ocupación general: ", Redon((totalVendidos / (6 * 40.0)) * 100), "%";
+            
+            // Encontrar destino con mejor y peor ocupación
+            Definir mejorOcupacion, peorOcupacion Como Real;
+            Definir idxMejor, idxPeor Como Entero;
+            mejorOcupacion <- 0;
+            peorOcupacion <- 100;
+            idxMejor <- 0;
+            idxPeor <- 0;
+            
+            Para i <- 0 Hasta 5 Hacer
+                porcentajeVentas <- (ventasPorDestino[i] / 40.0) * 100;
+                
+                Si porcentajeVentas > mejorOcupacion Entonces
+                    mejorOcupacion <- porcentajeVentas;
+                    idxMejor <- i;
+                FinSi
+                
+                Si porcentajeVentas < peorOcupacion Entonces
+                    peorOcupacion <- porcentajeVentas;
+                    idxPeor <- i;
+                FinSi
+            FinPara
+            
+            Escribir "Mejor ocupación: ", destinos[idxMejor,1], " -> ", destinos[idxMejor,2];
+            Escribir "  (", Redon(mejorOcupacion), "% de asientos vendidos)";
+            Escribir "Menor ocupación: ", destinos[idxPeor,1], " -> ", destinos[idxPeor,2];
+            Escribir "  (", Redon(peorOcupacion), "% de asientos vendidos)";
+        FinSi
+        
+        Escribir "===========================================";
+        Escribir "Presione cualquier tecla para continuar...";
+        Esperar Tecla;
+        Limpiar Pantalla;
+    Sino
+        Limpiar Pantalla;
+        Escribir "-------------------------------------------";
+        Escribir "No es posible mostrar balance, no se registraron datos...";
+    FinSi
 FinSubProceso
 
 
@@ -414,12 +574,12 @@ FinSubProceso
 // =======================
 SubProceso ListaPasajeros(pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, destinos, TotaldePasajeros Por Referencia, pasajerosFecha)
     Definir i, destinoIdx Como Entero;
-	
-	Limpiar Pantalla;
+    
+    Limpiar Pantalla;
     Escribir "===========================================";
     Escribir "           LISTA DE PASAJEROS";
     Escribir "===========================================";
-	
+    
     Si TotaldePasajeros = 0 Entonces
         Escribir "No hay pasajeros registrados en el sistema.";
     Sino
@@ -441,7 +601,7 @@ SubProceso ListaPasajeros(pasajerosNombre, pasajerosDNI, pasajerosDestino, pasaj
             FinSi
         FinPara
     FinSi
-	
+    
     Escribir "===========================================";
 FinSubProceso
 
@@ -450,6 +610,7 @@ FinSubProceso
 // MENÚ CLIENTE
 // =======================
 SubProceso MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, fechasDisponibles, pasajerosFecha)    
+    Definir opc1 Como Entero;
     Repetir
         Escribir "===========================================";
         Escribir "            MENÚ CLIENTE";
@@ -460,30 +621,29 @@ SubProceso MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasaje
         Escribir "4. Partidas";
         Escribir "5. Volver al menú principal";
         Escribir "-------------------------------------------";
-        Escribir Sin Saltar "Seleccione una opción: ";
-        Leer opc1;
+        
+        // [CAMBIO] Lectura validada
+        opc1 <- LeerNumeroEnRango("Seleccione una opción: ", 1, 5, 2);
         
         Segun opc1 Hacer
             1:
                 Escribir "Compra de pasaje";
-				ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha, fechasDisponibles);                
-				Escribir "Control de ticket";
-			2:	
-				Escribir "Control de ticket";
-				ControlTicket(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha);           
-			3:
-				Escribir "Cancelación de pasaje";
-				CancelarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha);            
-			4:
-				Escribir "Partidas";
-				Partidas(destinos, asientos);
-			5:
-				Escribir "Volviendo...";
-			De Otro Modo:
-				Escribir "Opción no válida.";
-		FinSegun
-	Hasta Que opc1 = 5;
-	
+                ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha, fechasDisponibles);                
+            2:  
+                Escribir "Control de ticket";
+                ControlTicket(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha);           
+            3:
+                Escribir "Cancelación de pasaje";
+                CancelarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, pasajerosFecha);            
+            4:
+                Escribir "Partidas";
+                Partidas(destinos, asientos);
+            5:
+                Escribir "Volviendo...";
+            De Otro Modo:
+                Escribir "Opción no válida.";
+        FinSegun
+    Hasta Que opc1 = 5;
 FinSubProceso
 
 
@@ -491,27 +651,18 @@ FinSubProceso
 // COMPRAR PASAJE
 // =======================
 SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha, fechasDisponibles)
-    
     Definir destinoElegido, asientoElegido, filaElegida, colElegida, i, j Como Entero;
     Definir nombre, dni, codigoQR Como Caracter;
     Definir precioBase Como Real;
     Definir asientoDisponible Como Logico;
-    
-    // Destinos
-	Repetir
-		Escribir "DESTINOS DISPONIBLES:";
-		Para i <- 0 Hasta 5 Hacer
-			Escribir destinos[i,0], " - ", destinos[i,1], " -> ", destinos[i,2], " - $", destinos[i,3];
-		FinPara
-		
-		Escribir "Seleccione el número de destino:";
-		Leer destinoElegido;
-		destinoElegido <- destinoElegido - 1;
-		Si destinoElegido < 0 O destinoElegido > 5 Entonces
-			Escribir "Destino no válido.";
-		FinSi
-	Hasta Que destinoElegido >= 0 Y destinoElegido <= 5
-    
+	
+    // Destinos (tu listado original se mantiene)
+    Escribir "DESTINOS DISPONIBLES:";
+    Para i <- 0 Hasta 5 Hacer
+        Escribir destinos[i,0], " - ", destinos[i,1], " -> ", destinos[i,2], " - $", destinos[i,3];
+    FinPara
+    // [CAMBIO] Lectura validada de destino
+    destinoElegido <- LeerNumeroEnRango("Seleccione el número de destino: ", 1, 6, 2) - 1;
     
     // Fecha fija (solo hay una disponible)
     pasajerosFecha[TotaldePasajeros] <- fechasDisponibles[destinoElegido,0];
@@ -526,13 +677,9 @@ SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasa
     // Elegir asiento por fila/columna
     asientoDisponible <- Falso;
     Mientras No asientoDisponible Hacer
-        Escribir "Seleccione fila (1-10): ";
-        Leer filaElegida;
-        Escribir "Seleccione columna (1-4) [1=A,2=B,3=C,4=D]: ";
-        Leer colElegida;
-        
-        filaElegida <- filaElegida - 1;
-        colElegida <- colElegida - 1;
+        // [CAMBIO] Lecturas validadas
+        filaElegida <- LeerNumeroEnRango("Seleccione fila (1-10): ", 1, 10, 2) - 1;
+        colElegida  <- LeerNumeroEnRango("Seleccione columna (1-4) [1=A,2=B,3=C,4=D]: ", 1, 4, 2) - 1;
         
         Si filaElegida < 0 O filaElegida > 9 O colElegida < 0 O colElegida > 3 Entonces
             Escribir "Posición inválida.";
@@ -551,149 +698,165 @@ SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasa
     Escribir "-------------------------------------------";
     Escribir "DATOS DEL PASAJERO";
     Escribir "-------------------------------------------";
-    Escribir "Nombre: "; Leer nombre;
-    Escribir "DNI: "; Leer dni;
-    
-    // Guardar
-    pasajerosNombre[TotaldePasajeros] <- nombre;
-    pasajerosDNI[TotaldePasajeros] <- dni;
-    pasajerosDestino[TotaldePasajeros] <- destinoElegido;
-    pasajerosAsiento[TotaldePasajeros] <- asientoElegido;
-    pasajerosPago[TotaldePasajeros] <- precioBase; 
-    pasajerosPagado[TotaldePasajeros] <- Verdadero;
-    
-    // Generar QR
-    codigoQR <- "TERMINAL|" + dni + "|" + ConvertirATexto(destinoElegido+1) + "|" + ConvertirATexto(asientoElegido+1);
-    pasajerosCodigoQR[TotaldePasajeros] <- codigoQR;
-    
-    // Mostrar QR
-    Escribir "_________________________________________";
-    Escribir "                ## ## #####  #####";
-    Escribir "                ### #   QR   #####";
-    Escribir "                # # #        ## ##";
-    Escribir "                # ###        # ###";
-    Escribir "                ### #  ", Subcadena(dni,1,5), " # ###";
-    Escribir "                # ###    ", ConvertirATexto(asientoElegido+1), "   # # #";
-    Escribir "                ## ## ##### ###  #";
-    Escribir "_________________________________________";
-    Escribir "Código QR: ", codigoQR;
-    Escribir "_________________________________________";
-    esperar 1 Segundos;
-    // Confirmación
-    Escribir "===========================================";
-    Escribir "¡RESERVA CONFIRMADA Y PAGADA!";
-	esperar 2 Segundos;
-    Escribir "Destino: ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
-    Escribir "Fecha: ", pasajerosFecha[TotaldePasajeros];
-    Escribir "Asiento (número interno): ", (asientoElegido + 1);
-    Escribir "Precio final: $", precioBase;
-    Escribir "===========================================";
-    esperar 2 Segundos;
-    // Contadores
-    TotaldePasajeros <- TotaldePasajeros + 1;
-    ventasPorDestino[destinoElegido] <- ventasPorDestino[destinoElegido] + 1;
+    // [CAMBIO] Lecturas validadas de nombre y DNI + control duplicado
+    nombre <- LeerNombreValido("Nombre: ");
+    dni <- LeerDNIValido;
+	
+
+    Si DniExiste(pasajerosDNI, TotaldePasajeros, dni) Entonces
+        Escribir "Ese DNI ya tiene pasaje. Operación cancelada.";
+        asientos[destinoElegido, asientoElegido] <- 0 ; // liberar asiento reservado
+    Sino
+        // Guardar
+        pasajerosNombre[TotaldePasajeros] <- nombre;
+        pasajerosDNI[TotaldePasajeros] <- dni;
+        pasajerosDestino[TotaldePasajeros] <- destinoElegido;
+        pasajerosAsiento[TotaldePasajeros] <- asientoElegido;
+        pasajerosPago[TotaldePasajeros] <- precioBase ;
+        pasajerosPagado[TotaldePasajeros] <- Verdadero;
+        
+        // Generar QR
+        codigoQR <- "TERMINAL|" + dni + "|" + ConvertirATexto(destinoElegido+1) + "|" + ConvertirATexto(asientoElegido+1);
+        pasajerosCodigoQR[TotaldePasajeros] <- codigoQR;
+        
+        // Mostrar QR
+        Escribir "_________________________________________";
+        Escribir "                ## ## #####  #####";
+        Escribir "                ### #   QR   #####";
+        Escribir "                # # #        ## ##";
+        Escribir "                # ###        # ###";
+        // [CAMBIO] Subcadena base 0
+        Escribir "                ### #  ", Subcadena(dni, 0, 4), " # ###";
+        Escribir "                # ###    ", ConvertirATexto(asientoElegido+1), "   # # #";
+        Escribir "                ## ## ##### ###  #";
+        Escribir "_________________________________________";
+        Escribir "Código QR: ", codigoQR;
+        Escribir "_________________________________________";
+        Esperar 1 Segundos;
+        
+        // Confirmación
+        Escribir "===========================================";
+        Escribir "¡RESERVA CONFIRMADA Y PAGADA!";
+        Esperar 2 Segundos;
+        Escribir "Destino: ", destinos[destinoElegido,1], " -> ", destinos[destinoElegido,2];
+        Escribir "Fecha: ", pasajerosFecha[TotaldePasajeros];
+        Escribir "Asiento (número interno): ", (asientoElegido + 1);
+        Escribir "Precio final: $", precioBase;
+        Escribir "===========================================";
+        Esperar 2 Segundos;
+        
+        // Contadores
+        TotaldePasajeros <- TotaldePasajeros + 1;
+        ventasPorDestino[destinoElegido] <- ventasPorDestino[destinoElegido] + 1;
+    FinSi
 FinSubProceso
+
+
 
 // =======================
 // CONTROL TICKET
 // =======================
 SubProceso ControlTicket(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha)    
-	Definir i, encontrado, destinoIdx Como Entero;
+    Definir i, encontrado, destinoIdx Como Entero;
     Definir dniBuscado Como Caracter;
-	
+    
     Si TotaldePasajeros = 0 Entonces
         Escribir "No hay pasajeros registrados.";
-        Leer Retornar;
-    FinSi
-	
-    Escribir "CONTROL DE TICKET";
-    Escribir "Ingrese DNI:";
-    Leer dniBuscado;
-	
-    encontrado <- -1;
-    Para i <- 0 Hasta TotaldePasajeros - 1 Hacer
-        Si pasajerosDNI[i] = dniBuscado Entonces
-            encontrado <- i;
-        FinSi
-    FinPara
-	
-    Si encontrado = -1 Entonces
-        Escribir "No se encontró el ticket.";
+        Esperar Tecla;
     Sino
-		Limpiar Pantalla;
-        destinoIdx <- pasajerosDestino[encontrado];
-        Escribir "===========================================";
-        Escribir "TICKET DE EMBARQUE";
-        Escribir "Nombre: ", pasajerosNombre[encontrado];
-        Escribir "DNI: ", pasajerosDNI[encontrado];
-        Escribir "Destino: ", destinos[destinoIdx,1], " -> ", destinos[destinoIdx,2];
-        Escribir "Fecha: ", pasajerosFecha[encontrado];
-        Escribir "Asiento (número interno): ", pasajerosAsiento[encontrado] + 1;
-        Escribir "Precio: $", pasajerosPago[encontrado];
-        Si pasajerosPagado[encontrado] Entonces
-            Escribir "Estado: PAGADO";
-            Escribir "Código QR: ", pasajerosCodigoQR[encontrado];
+        Escribir "CONTROL DE TICKET";
+        Escribir "Ingrese DNI:";
+        // [CAMBIO] Lectura validada de DNI
+        dniBuscado <- LeerDNIValido;
+        
+        encontrado <- -1;
+        Para i <- 0 Hasta TotaldePasajeros - 1 Hacer
+            Si pasajerosDNI[i] = dniBuscado Entonces
+                encontrado <- i;
+            FinSi
+        FinPara
+        
+        Si encontrado = -1 Entonces
+            Escribir "No se encontró el ticket.";
         Sino
-            Escribir "Estado: PENDIENTE DE PAGO";
+            Limpiar Pantalla;
+            destinoIdx <- pasajerosDestino[encontrado];
+            Escribir "===========================================";
+            Escribir "TICKET DE EMBARQUE";
+            Escribir "Nombre: ", pasajerosNombre[encontrado];
+            Escribir "DNI: ", pasajerosDNI[encontrado];
+            Escribir "Destino: ", destinos[destinoIdx,1], " -> ", destinos[destinoIdx,2];
+            Escribir "Fecha: ", pasajerosFecha[encontrado];
+            Escribir "Asiento (número interno): ", pasajerosAsiento[encontrado] + 1;
+            Escribir "Precio: $", pasajerosPago[encontrado];
+            Si pasajerosPagado[encontrado] Entonces
+                Escribir "Estado: PAGADO";
+                Escribir "Código QR: ", pasajerosCodigoQR[encontrado];
+            Sino
+                Escribir "Estado: PENDIENTE DE PAGO";
+            FinSi
+            Escribir "===========================================";
+            Esperar 2 Segundos;
         FinSi
-        Escribir "===========================================";
-		esperar 2 Segundos;
     FinSi
 FinSubProceso
+
 
 // =======================
 // CANCELAR PASAJE
 // =======================
 SubProceso CancelarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros Por Referencia, pasajerosFecha)
-	
     Definir dniBuscado, confirmacion Como Caracter;
     Definir i, encontrado, destinoIdx, asientoIdx Como Entero;
-	
+    
     Escribir "Ingrese DNI para cancelar:";
-    Leer dniBuscado;
-	
+    // [CAMBIO] Lectura validada de DNI
+    dniBuscado <- LeerDNIValido();
+    
     encontrado <- -1;
     Para i <- 0 Hasta TotaldePasajeros - 1 Hacer
         Si pasajerosDNI[i] = dniBuscado Entonces
             encontrado <- i;
         FinSi
     FinPara
-	
+    
     Si encontrado = -1 Entonces
         Escribir "No se encontró el pasaje.";
     Sino
         destinoIdx <- pasajerosDestino[encontrado];
         asientoIdx <- pasajerosAsiento[encontrado];
-		Limpiar Pantalla;
+        Limpiar Pantalla;
         Escribir "-------------------------------------------";
         Escribir "Pasajero: ", pasajerosNombre[encontrado], " | DNI: ", pasajerosDNI[encontrado];
         Escribir "Destino: ", destinos[destinoIdx,1], " -> ", destinos[destinoIdx,2];
         Escribir "Asiento (número interno): ", asientoIdx + 1;
         Escribir "-------------------------------------------";
-        Escribir "¿Seguro cancelar? (S/N):";
-        Leer confirmacion;
-		
-        Si confirmacion = "S" O confirmacion = "s" Entonces
+        // [CAMBIO] Confirmación segura y acciones de cancelación
+        confirmacion <- LeerConfirmacionSN("¿Seguro cancelar?");
+        Si confirmacion = "S" Entonces
             Escribir "ATENCIÓN: La empresa no reconoce reembolso.";
             Escribir "Motivo: cancelación del usuario.";
             asientos[destinoIdx, asientoIdx] <- 0;
             pasajerosNombre[encontrado] <- "CANCELADO";
             pasajerosPagado[encontrado] <- Falso;
-            ventasPorDestino[destinoIdx] <- ventasPorDestino[destinoIdx] - 1;
+            Si ventasPorDestino[destinoIdx] > 0 Entonces
+                ventasPorDestino[destinoIdx] <- ventasPorDestino[destinoIdx] - 1;
+            FinSi
             Escribir "Cancelado con éxito.";
-        Sino
+        SiNo
             Escribir "Cancelación abortada.";
         FinSi
-		esperar 2 Segundos;
+        Esperar 2 Segundos;
     FinSi
 FinSubProceso
+
 
 // =======================
 // PARTIDAS
 // =======================
 SubProceso Partidas(destinos, asientos)
     Definir i, j, libres Como Entero;
-	Limpiar Pantalla;
+    Limpiar Pantalla;
     Escribir "===========================================";
     Escribir "           LISTA DE PARTIDAS";
     Escribir "===========================================";
@@ -707,5 +870,5 @@ SubProceso Partidas(destinos, asientos)
         Escribir destinos[i,1], " -> ", destinos[i,2], " | Asientos libres: ", libres;
     FinPara
     Escribir "===========================================";
-	Esperar 2 Segundos;
+    Esperar 2 Segundos;
 FinSubProceso
