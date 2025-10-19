@@ -20,11 +20,9 @@ Proceso TerminalAutogestion
     Dimension fechasDisponibles[6,10];
     Dimension ventasPorDestino[6];
 	
-	
-	
-	
-	//grafico
-	Escribir "..................................................................";
+    // Inicializar
+    InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
+    Escribir "..................................................................";
 	Escribir "............................_#^^#_................................";
 	Escribir "...........................#^....^#...............................";
 	Escribir "..........................#^..__..^#..............................";
@@ -56,11 +54,6 @@ Proceso TerminalAutogestion
 	Escribir "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++";
 	Esperar 7 segundos;
 	Limpiar Pantalla;
-	
-	
-    // Inicializar
-    InicializarSistema(destinos, asientos, ventasPorDestino, TotaldePasajeros, pasajerosDNI, pasajerosCodigoQR, fechasDisponibles, pasajerosPago, pasajerosDestino);	
-    
     // MENU PRINCIPAL DE USUARIOS
     Repetir
         Escribir "===========================================";
