@@ -68,7 +68,7 @@ Proceso TerminalAutogestion
         Escribir "-------------------------------------------";
 		
         // Lectura validada (evita letras/signos/vacío)
-        opc <- LeerNumeroEnRango("Seleccione su tipo de usuario: ", 1, 3, 2);
+        opc <- LeerNumeroEntre("Seleccione su tipo de usuario: ", 1, 3, 2);
         
         Segun opc Hacer
             1:
@@ -96,23 +96,26 @@ FinProceso
 // QuitarEspacios 
 Funcion texto_sin_espacios <- QuitarEspacios(texto_ingresado)
     Definir inicio, ultimo Como Entero;
-    Definir ch Como Caracter;
     inicio <- 0;
     ultimo <- Longitud(texto_ingresado) - 1;
 	
-    // quitar espacios al inicio
+    // quitar espacios al inicio (mientras no se pase del final y el carácter actual sea un espacio)
     Mientras inicio <= ultimo Y Subcadena(texto_ingresado, inicio, inicio) = " " Hacer
+		// salta el espacio
         inicio <- inicio + 1;
     FinMientras
 	
-    // quitar espacios al final
+    // quitar espacios al final ( mientras no se pase del inicio y el carácter actual al final sea un espacio)
     Mientras ultimo >= inicio Y Subcadena(texto_ingresado, ultimo, ultimo) = " " Hacer
+		//Retrocede la posición final
         ultimo <- ultimo - 1;
     FinMientras
 	
     Si ultimo < inicio Entonces
+		// si no hay caracteres útiles devolver cadena vacía
         texto_sin_espacios <- "";
     SiNo
+		//toma desde el primer no-espacio hasta el último no-espacio
         texto_sin_espacios <- Subcadena(texto_ingresado, inicio, ultimo);
     FinSi
 FinFuncion
@@ -126,7 +129,7 @@ Funcion es_valido <- TieneSoloDigitos(texto_ingresado)
     es_valido <- (Longitud(texto_ingresado) > 0); //si su long >0  se hace true
     Para i <- 0 Hasta Longitud(texto_ingresado)-1 Hacer
         caracterActual <- Subcadena(texto_ingresado, i, i);//recorre del 0 al 9 , todos los i
-        Si No (caracterActual >= "0" Y ch <= "9") Entonces
+        Si No (caracterActual >= "0" Y caracterActual <= "9") Entonces
             es_valido <- Falso;
         FinSi
     FinPara
@@ -146,9 +149,9 @@ FinFuncion
 
 // ======= LECTURAS SEGURAS =======
 // numeros entre tal y tal 
-Funcion numer <- LeerNumeroEnRango(mensaje, minimo, maximo, largo_max)
+Funcion numer <- LeerNumeroEntre(mensaje, minimo, maximo, largo_max)
     Definir ok Como Logico;
-    Definir entrada Como Caracter;
+    Definir entrada Como cadena;
     Definir valores Como Entero;
     Repetir
         Escribir Sin Saltar mensaje;//muestra el mensaje
@@ -168,7 +171,7 @@ FinFuncion
 
 
 Funcion dni <- LeerDNIValido // funcion sin parametrps
-    Definir entrada, limpio Como Caracter;
+    Definir entrada, limpio Como cadena;
     Definir ok Como Logico;
 	
     Repetir
@@ -178,7 +181,7 @@ Funcion dni <- LeerDNIValido // funcion sin parametrps
         limpio <- DejarSoloDigitos(entrada)  ; // quita puntos,guiones
         ok <- (Longitud(limpio) = 8);//al final solo tiene q tener  8 digitos
         Si No ok Entonces // si no pasa eso le tiro un mensaje
-            Escribir "DNI inválido: deben ser exactamente 8 dígitos.";
+            Escribir "DNI inválido: deben ser 8 numeros.";
         FinSi
     Hasta Que ok //repite hasta q no sea verdadero
     dni <- limpio;
@@ -186,7 +189,7 @@ FinFuncion
 
 // [AGREGADO]
 Funcion respuesta <- LeerConfirmacionSN(mensaje)
-    Definir entrada Como Caracter;
+    Definir entrada Como cadena;
     Repetir
         Escribir Sin Saltar mensaje, " (S/N): ";//escribe mensaje y pide confimacion 
         Leer entrada;
@@ -196,7 +199,8 @@ Funcion respuesta <- LeerConfirmacionSN(mensaje)
 FinFuncion
 
 Funcion nombre <- LeerNombreValido(mensaje)
-    Definir entrada, caracterActual Como Caracter;
+    Definir entrada como cadena;
+	definir caracterActual Como Caracter;
     Definir i Como Entero;
     Definir ok Como Logico;
 	
@@ -204,6 +208,7 @@ Funcion nombre <- LeerNombreValido(mensaje)
         Escribir Sin Saltar mensaje;
         Leer entrada;
         entrada <- QuitarEspacios(entrada);
+		entrada <- Mayusculas(entrada);
 		
         ok <- (Longitud(entrada) > 0);
         Si ok Entonces
@@ -211,17 +216,15 @@ Funcion nombre <- LeerNombreValido(mensaje)
             Para i <- 0 Hasta Longitud(entrada)-1 Hacer
 				caracterActual<- Subcadena(entrada, i, i);  // <- obtener 1 carácter
                 // inválido si NO es letra (A-Z/a-z) NI espacio
-                Si No ( (caracterActual >= "A" Y caracterActual <= "Z") O (caracterActual >= "a" Y caracterActual <= "z") O (caracterActual = " ") ) Entonces
+                Si No ( (caracterActual >= "A" Y caracterActual <= "Z") O (caracterActual = " ") ) Entonces
                     ok <- Falso;
                 FinSi
             FinPara
         FinSi
-		
         Si No ok Entonces
             Escribir "Nombre inválido (solo letras y espacios).";
         FinSi
     Hasta Que ok
-	
     nombre <- entrada;
 FinFuncion
 
@@ -230,8 +233,6 @@ FinFuncion
 Funcion existe <- DniExiste(pasajerosDNI, totalPasajeros, dniBuscado)
     Definir i Como Entero;
     existe <- Falso;
-	
-    // ojo: usar <= y >= ASCII,
     Si totalPasajeros > 0 Entonces
         Para i <- 0 Hasta totalPasajeros - 1 Hacer
             Si pasajerosDNI[i] = dniBuscado Entonces
@@ -298,7 +299,7 @@ SubProceso accesoAdmin <- AutenticarAdmin//corrobora si puede entrar o no
     Leer usuario;
     Escribir Sin Saltar "Contraseña: ";
     Leer clave;
-    
+    Limpiar Pantalla;
     Si usuario = "admin" Y clave = "1234" Entonces
         accesoAdmin <- Verdadero;
         Escribir "¡Acceso concedido!";
@@ -324,7 +325,7 @@ SubProceso MenuAdministrador(destinos, asientos, pasajerosNombre, pasajerosDNI, 
         Escribir "4. Volver al menú principal";
         Escribir "-------------------------------------------";
         
-        opc <- LeerNumeroEnRango("Seleccione una opción: ", 1, 4, 2);// validacion 
+        opc <- LeerNumeroEntre("Seleccione una opción: ", 1, 4, 2);// validacion 
         
         Segun opc Hacer
             1: 
@@ -404,7 +405,7 @@ SubProceso EstadoAsientos(destinos, asientos)
         Escribir "-------------------------------------------";
         Escribir Sin Saltar "Seleccione una opción: ";
         // [CAMBIO] Lectura validada
-        opc <- LeerNumeroEnRango("Seleccione una opción: ", 1, 7, 2);//valida
+        opc <- LeerNumeroEntre("Seleccione una opción: ", 1, 7, 2);//valida
         
         Si opc >= 1 Y opc <= 6 Entonces
             destinoElegido <- opc - 1;
@@ -505,7 +506,9 @@ SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasaj
         Escribir "Promedio por pasaje: $", promedioVenta;
         Escribir "Pasajeros en sistema: ", TotaldePasajeros;
         Escribir "";
-        
+        Escribir "===========================================";
+        Escribir "Presione cualquier tecla para continuar...";
+        Esperar Tecla;
         // Mostrar ventas por destino
         Escribir "-------------------------------------------";
         Escribir "VENTAS POR DESTINO:";
@@ -530,7 +533,9 @@ SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasaj
             Escribir "Recaudación: $", recaudacionPorDestino;
             Escribir "";
         FinPara
-        
+        Escribir "===========================================";
+        Escribir "Presione cualquier tecla para continuar...";
+        Esperar Tecla;
         // Mostrar destino más vendido
         Escribir "-------------------------------------------";
         Escribir "DESTINO MÁS POPULAR:";
@@ -547,7 +552,9 @@ SubProceso BalanceTransporte(destinos, ventasPorDestino, pasajerosDestino, pasaj
         Sino
             Escribir "No hay ventas registradas";
         FinSi
-        
+        Escribir "===========================================";
+        Escribir "Presione cualquier tecla para continuar...";
+        Esperar Tecla;
         // Análisis de ocupación
         Escribir "";
         Escribir "-------------------------------------------";
@@ -651,7 +658,7 @@ SubProceso MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasaje
         Escribir "-------------------------------------------";
         
         // [CAMBIO] Lectura validada
-        opc1 <- LeerNumeroEnRango("Seleccione una opción: ", 1, 5, 2);
+        opc1 <- LeerNumeroEntre("Seleccione una opción: ", 1, 5, 2);
         
         Segun opc1 Hacer
             1:
@@ -690,7 +697,7 @@ SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasa
         Escribir destinos[i,0], " - ", destinos[i,1], " -> ", destinos[i,2], " - $", destinos[i,3];
     FinPara
     // [CAMBIO] Lectura validada de destino
-    destinoElegido <- LeerNumeroEnRango("Seleccione el número de destino: ", 1, 6, 2) - 1;
+    destinoElegido <- LeerNumeroEntre("Seleccione el número de destino: ", 1, 6, 2) - 1;
     
     // Fecha fija 
     pasajerosFecha[TotaldePasajeros] <- fechasDisponibles[destinoElegido,0];
@@ -706,8 +713,8 @@ SubProceso ComprarPasaje(destinos, asientos, pasajerosNombre, pasajerosDNI, pasa
     asientoDisponible <- Falso;
     Mientras No asientoDisponible Hacer
         // [CAMBIO] Lecturas validadas
-        filaElegida <- LeerNumeroEnRango("Seleccione fila (1-10): ", 1, 10, 2) - 1;
-        colElegida  <- LeerNumeroEnRango("Seleccione columna (1-4) [1=A,2=B,3=C,4=D]: ", 1, 4, 2) - 1;
+        filaElegida <- LeerNumeroEntre("Seleccione fila (1-10): ", 1, 10, 2) - 1;
+        colElegida  <- LeerNumeroEntre("Seleccione columna (1-4) [1=A,2=B,3=C,4=D]: ", 1, 4, 2) - 1;
         
         Si filaElegida < 0 O filaElegida > 9 O colElegida < 0 O colElegida > 3 Entonces
             Escribir "Posición inválida.";
