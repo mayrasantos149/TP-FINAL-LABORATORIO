@@ -72,9 +72,11 @@ Proceso TerminalAutogestion
         
         Segun opc Hacer
             1:
-                Escribir "Acceso como CLIENTE";
-                MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);               
-            2:
+				Escribir "Acceso como CLIENTE";
+				Si AutenticarClienteSimple() Entonces
+					MenuCliente(destinos, asientos, pasajerosNombre, pasajerosDNI, pasajerosDestino, pasajerosAsiento, pasajerosPago, pasajerosPagado, pasajerosCodigoQR, ventasPorDestino, TotaldePasajeros, fechasDisponibles, pasajerosFecha);
+				FinSi;
+			2:
                 Escribir "Acceso como ADMINISTRADOR";
                 auth <- AutenticarAdmin();
                 Si auth Entonces
@@ -307,6 +309,49 @@ SubProceso accesoAdmin <- AutenticarAdmin//corrobora si puede entrar o no
         Escribir "Credenciales incorrectas.";
     FinSi
 FinSubProceso
+
+
+// =======================
+// LOGIN CLIENTE
+// =======================
+SubProceso accesoCliente <- AutenticarClienteSimple // verifica usuario y clave del cliente
+    Definir accesoCliente Como Logico;
+    Definir usuario, clave Como Caracter;
+	
+    accesoCliente <- Falso;
+    Escribir "-------------------------------------------";
+    Escribir "INGRESO CLIENTE (solo usuarios predefinidos)";
+    Escribir "-------------------------------------------";
+    Escribir Sin Saltar "Usuario: ";
+    Leer usuario;
+    Escribir Sin Saltar "Contraseña: ";
+    Leer clave;
+    Limpiar Pantalla;
+	
+    // Normalizo por si escriben minúsculas o espacios
+    usuario <- Mayusculas(QuitarEspacios(usuario));
+    clave   <- QuitarEspacios(clave);
+	
+    // Validación de los 3 usuarios habilitados
+    Si (usuario = "MSANTOS" Y clave = "1111") Entonces
+        accesoCliente <- Verdadero;
+    Sino
+        Si (usuario = "MPEREYRA" Y clave = "2222") Entonces
+            accesoCliente <- Verdadero;
+        Sino
+            Si (usuario = "JPEREZ" Y clave = "3333") Entonces
+                accesoCliente <- Verdadero;
+            FinSi
+        FinSi
+    FinSi
+	
+    Si accesoCliente Entonces
+        Escribir "¡Acceso concedido, bienvenido/a!";
+    Sino
+        Escribir "Usuario o contraseña incorrectos.";
+    FinSi
+FinSubProceso
+
 
 
 // =======================
